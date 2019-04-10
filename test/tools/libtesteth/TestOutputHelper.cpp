@@ -18,12 +18,13 @@
  * Fixture class for boost output when running testeth
  */
 
-#include <boost/test/unit_test.hpp>
-#include <boost/io/ios_state.hpp>
 #include <libethashseal/Ethash.h>
 #include <libethcore/BasicAuthority.h>
-#include <test/tools/libtesteth/TestOutputHelper.h>
 #include <test/tools/libtesteth/Options.h>
+#include <test/tools/libtesteth/TestOutputHelper.h>
+#include <boost/filesystem.hpp>
+#include <boost/io/ios_state.hpp>
+#include <boost/test/unit_test.hpp>
 #include <numeric>
 
 using namespace std;
@@ -84,6 +85,13 @@ void TestOutputHelper::finishTest()
 
 void TestOutputHelper::printTestExecStats()
 {
+    for (auto const& it : m_testSuiteStatus)
+    {
+        if (it.second == false)
+            std::cerr << "WARNING: Test folder '" + it.first + "' uppears to be unused!"
+                      << std::endl;
+    }
+
     if (Options::get().exectimelog)
     {
         boost::io::ios_flags_saver saver(cout);
@@ -99,4 +107,33 @@ void TestOutputHelper::printTestExecStats()
             std::cout << setw(45) << t.second << setw(25) << " time: " + toString(t.first) << "\n";
         saver.restore();
     }
+}
+
+void TestOutputHelper::registerTestFolders(boost::filesystem::path _path)
+{
+    // -t SuiteName/caseName   parse caseName as filter
+    std::string filter;
+    std::string const& tSuiteString = Options::get().rCurrentTestSuite;
+    std::size_t pos = tSuiteString.find('/');
+    if (pos != string::npos)
+        filter = tSuiteString.substr(pos + 1, tSuiteString.length() - pos);
+
+    using fsIterator = boost::filesystem::directory_iterator;
+    for (fsIterator it(_path); it != fsIterator(); ++it)
+    {
+        if (!filter.empty() && it->path().filename() == filter)
+        {
+            m_testSuiteStatus.emplace(std::make_pair(it->path().filename().c_str(), false));
+            break;
+        }
+        else if (filter.empty())
+            m_testSuiteStatus.emplace(std::make_pair(it->path().filename().c_str(), false));
+    }
+}
+
+void TestOutputHelper::markTestFolderAsPassed(string const& _folderName)
+{
+    BOOST_REQUIRE_MESSAGE(m_testSuiteStatus.count(_folderName),
+        "Trying to mark unregistered folder name: '" + _folderName + "'");
+    m_testSuiteStatus.at(_folderName) = true;
 }

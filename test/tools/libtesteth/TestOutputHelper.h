@@ -52,6 +52,10 @@ public:
 	boost::filesystem::path const& testFile() { return m_currentTestFileName; }
 	void printTestExecStats();
 
+    // Checkup that all test folders are active during the test run
+    void registerTestFolders(boost::filesystem::path _path);
+    void markTestFolderAsPassed(std::string const& _folderName);
+
 private:
 	TestOutputHelper() {}
 	Timer m_timer;
@@ -62,6 +66,7 @@ private:
 	boost::filesystem::path m_currentTestFileName;
 	typedef std::pair<double, std::string> execTimeName;
 	std::vector<execTimeName> m_execTimeResults;
+    std::map<std::string, bool> m_testSuiteStatus;
 };
 
 class TestOutputHelperFixture

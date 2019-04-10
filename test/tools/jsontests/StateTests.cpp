@@ -142,15 +142,28 @@ class GeneralTestFixture
 public:
 	GeneralTestFixture()
 	{
-		test::StateTestSuite suite;
-		string casename = boost::unit_test::framework::current_test_case().p_name;
-		if (casename == "stQuadraticComplexityTest" && !test::Options::get().all)
-		{
-			std::cout << "Skipping " << casename << " because --all option is not specified.\n";
-			return;
-		}
-		suite.runAllTestsInFolder(casename);
-	}
+        test::StateTestSuite suite;
+        string casename = boost::unit_test::framework::current_test_case().p_name;
+
+        // Mark all test folders to run
+        static bool registerTestFolders = false;
+        if (!registerTestFolders)
+        {
+            registerTestFolders = true;
+            boost::filesystem::path path = suite.getFullPathFiller(casename).parent_path();
+            test::TestOutputHelper::get().registerTestFolders(path);
+        }
+
+        // Check specific test cases
+        if (casename == "stQuadraticComplexityTest" && !test::Options::get().all)
+        {
+            std::cout << "Skipping " << casename << " because --all option is not specified.\n";
+            test::TestOutputHelper::get().markTestFolderAsPassed(casename);
+            return;
+        }
+        suite.runAllTestsInFolder(casename);
+        test::TestOutputHelper::get().markTestFolderAsPassed(casename);
+    }
 };
 
 BOOST_FIXTURE_TEST_SUITE(GeneralStateTests, GeneralTestFixture)
